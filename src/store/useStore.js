@@ -69,6 +69,58 @@ const weekData = [
 // Active boost shape: { id, type, multiplier, expiresAt, label, emoji }
 const defaultBoosts = []
 
+// ── Groups seed data ─────────────────────────────────────────────────────────
+const SEEDED_MEMBERS = {
+  f1: { id: 'f1', name: 'Zara',      avatar: { animal: 'fox',       colorScheme: 'orange', hat: 'crown',  frame: 'gold',    background: 'forest' }, minutesThisWeek: 340, minutesToday: 94,  streak: 22 },
+  f2: { id: 'f2', name: 'Leo',       avatar: { animal: 'lion',      colorScheme: 'gold',   hat: null,     frame: 'default', background: 'space'  }, minutesThisWeek: 210, minutesToday: 47,  streak: 8  },
+  f3: { id: 'f3', name: 'Mia',       avatar: { animal: 'panda',     colorScheme: 'purple', hat: 'wizard', frame: 'neon',    background: 'night'  }, minutesThisWeek: 510, minutesToday: 120, streak: 31 },
+  f5: { id: 'f5', name: 'Aria',      avatar: { animal: 'butterfly', colorScheme: 'pink',   hat: 'flower', frame: 'rainbow', background: 'sunset' }, minutesThisWeek: 290, minutesToday: 73,  streak: 19 },
+  f6: { id: 'f6', name: 'Ren',       avatar: { animal: 'dragon',    colorScheme: 'teal',   hat: null,     frame: 'neon',    background: 'forest' }, minutesThisWeek: 175, minutesToday: 58,  streak: 12 },
+}
+
+const defaultMyGroups = [
+  {
+    id: 'grp1',
+    name: 'Year 11 Science',
+    password: 'science11',
+    emoji: '🔬',
+    members: [
+      SEEDED_MEMBERS.f1, SEEDED_MEMBERS.f3, SEEDED_MEMBERS.f5,
+      { id: 'me', name: 'Scholar', avatar: { animal: 'owl', colorScheme: 'blue', hat: null, frame: 'default', background: 'space' }, minutesThisWeek: 480, minutesToday: 55, streak: 14 },
+    ],
+    chat: [
+      { id: 1, from: 'Mia',  text: 'Anyone else revising acids and bases? 🧪', time: '4m ago' },
+      { id: 2, from: 'Zara', text: 'Yes! Just finished mole calculations', time: '9m ago' },
+      { id: 3, from: 'Aria', text: 'Good luck everyone 💪', time: '14m ago' },
+    ],
+  },
+  {
+    id: 'grp2',
+    name: 'Maths Study Gang',
+    password: 'maths2026',
+    emoji: '📐',
+    members: [
+      SEEDED_MEMBERS.f2, SEEDED_MEMBERS.f6,
+      { id: 'me', name: 'Scholar', avatar: { animal: 'owl', colorScheme: 'blue', hat: null, frame: 'default', background: 'space' }, minutesThisWeek: 480, minutesToday: 55, streak: 14 },
+    ],
+    chat: [
+      { id: 1, from: 'Leo', text: 'Stuck on integration by parts 😭', time: '1m ago' },
+      { id: 2, from: 'Ren', text: 'Use LIATE rule — log/inverse/algebraic/trig/exp', time: '3m ago' },
+    ],
+  },
+]
+
+// Groups available to be joined (not yet a member)
+const defaultGroupDirectory = [
+  { id: 'grp1',  name: 'Year 11 Science',     password: 'science11',  emoji: '🔬', memberCount: 4 },
+  { id: 'grp2',  name: 'Maths Study Gang',     password: 'maths2026',  emoji: '📐', memberCount: 3 },
+  { id: 'grp3',  name: 'History Society',      password: 'tudor1485',  emoji: '📜', memberCount: 5 },
+  { id: 'grp4',  name: 'Sixth Form CS',        password: 'code42',     emoji: '💻', memberCount: 6 },
+  { id: 'grp5',  name: 'Bio Revision',         password: 'cells101',   emoji: '🌱', memberCount: 3 },
+  { id: 'grp6',  name: 'English Lit Circle',   password: 'gatsby',     emoji: '📖', memberCount: 4 },
+  { id: 'grp7',  name: 'Economics A-Level',    password: 'econ2026',   emoji: '📈', memberCount: 7 },
+]
+
 export const useStore = create(
   persist(
     (set, get) => ({
@@ -85,11 +137,16 @@ export const useStore = create(
       // Per-subject minutes — persisted, seeded with realistic defaults
       subjectStats: { ...DEFAULT_SUBJECT_STATS },
 
-      // Active boosts (persisted so they survive page reloads)
+      // Active boosts
       activeBoosts: defaultBoosts,
 
+      // Groups
+      myGroups: defaultMyGroups,
+      groupDirectory: defaultGroupDirectory,
+      activeGroupId: null,
+
       // Call state (not persisted)
-      call: null, // null | { participants: [...friendIds], myMuted: false, myCameraOff: false, speakingId: null }
+      call: null,
 
       setPage: (page) => set({ activePage: page }),
 
@@ -199,6 +256,83 @@ export const useStore = create(
       addMinutesToday: (m) =>
         set((state) => ({ todayMinutes: state.todayMinutes + m })),
 
+      // ─── Groups ───────────────────────────────────────────────────
+
+      setActiveGroup: (id) => set({ activeGroupId: id }),
+
+      createGroup: (name, password, emoji) => {
+        const state = get()
+        if (state.myGroups.some((g) => g.name.toLowerCase() === name.toLowerCase())) {
+          return { ok: false, error: 'A group with that name already exists.' }
+        }
+        const id = `grp_${Date.now()}`
+        const meEntry = {
+          id: 'me', name: state.user.name, avatar: state.user.avatar,
+          minutesThisWeek: state.todayMinutes * 7, minutesToday: state.todayMinutes, streak: state.user.streak,
+        }
+        const newGroup = { id, name, password, emoji, members: [meEntry], chat: [] }
+        const dirEntry = { id, name, password, emoji, memberCount: 1 }
+        set((s) => ({
+          myGroups: [...s.myGroups, newGroup],
+          groupDirectory: [...s.groupDirectory, dirEntry],
+          activeGroupId: id,
+        }))
+        return { ok: true }
+      },
+
+      joinGroup: (name, password) => {
+        const state = get()
+        const found = state.groupDirectory.find(
+          (g) => g.name.toLowerCase() === name.trim().toLowerCase()
+        )
+        if (!found) return { ok: false, error: 'No group found with that name.' }
+        if (found.password !== password) return { ok: false, error: 'Incorrect password.' }
+        if (state.myGroups.some((g) => g.id === found.id)) {
+          return { ok: false, error: "You're already in this group." }
+        }
+        const meEntry = {
+          id: 'me', name: state.user.name, avatar: state.user.avatar,
+          minutesThisWeek: state.todayMinutes * 7, minutesToday: state.todayMinutes, streak: state.user.streak,
+        }
+        // Build simulated members for the joined group (use seeded members)
+        const seededIds = ['f3', 'f1', 'f5', 'f2', 'f6']
+        const memberCount = found.memberCount
+        const simMembers = seededIds
+          .slice(0, Math.min(memberCount - 1, seededIds.length))
+          .map((fid) => SEEDED_MEMBERS[fid])
+          .filter(Boolean)
+        const fullGroup = {
+          ...found,
+          members: [...simMembers, meEntry],
+          chat: [
+            { id: Date.now(), from: simMembers[0]?.name || 'Member', text: 'Welcome to the group! 👋', time: 'just now' },
+          ],
+        }
+        set((s) => ({
+          myGroups: [...s.myGroups, fullGroup],
+          activeGroupId: found.id,
+        }))
+        return { ok: true }
+      },
+
+      leaveGroup: (groupId) =>
+        set((s) => ({
+          myGroups: s.myGroups.filter((g) => g.id !== groupId),
+          activeGroupId: s.activeGroupId === groupId ? null : s.activeGroupId,
+        })),
+
+      sendGroupMessage: (groupId, text) => {
+        const state = get()
+        set((s) => ({
+          myGroups: s.myGroups.map((g) =>
+            g.id !== groupId ? g : {
+              ...g,
+              chat: [{ id: Date.now(), from: 'You', text, time: 'now' }, ...g.chat],
+            }
+          ),
+        }))
+      },
+
       // ─── Call state ───────────────────────────────────────────────
       startCall: (friendIds) =>
         set({
@@ -233,6 +367,8 @@ export const useStore = create(
         todayMinutes: state.todayMinutes,
         selectedSubject: state.selectedSubject,
         subjectStats: state.subjectStats,
+        myGroups: state.myGroups,
+        groupDirectory: state.groupDirectory,
       }),
     }
   )

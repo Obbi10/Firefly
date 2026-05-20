@@ -5,14 +5,16 @@ import CallModal from './components/CallModal'
 import Dashboard from './pages/Dashboard'
 import StudyTimer from './pages/StudyTimer'
 import StudyRoom from './pages/StudyRoom'
+import Groups from './pages/Groups'
 import Shop from './pages/Shop'
 import Profile from './pages/Profile'
 
 const PAGES = {
-  home: Dashboard,
-  timer: StudyTimer,
-  room: StudyRoom,
-  shop: Shop,
+  home:    Dashboard,
+  timer:   StudyTimer,
+  room:    StudyRoom,
+  groups:  Groups,
+  shop:    Shop,
   profile: Profile,
 }
 

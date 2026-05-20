@@ -205,44 +205,6 @@ export default function StudyRoom() {
         </div>
       </div>
 
-      {/* Leaderboard */}
-      <div className="px-4 mt-3 flex-shrink-0">
-        <div className="glow-card rounded-2xl p-3">
-          <div className="text-xs text-blue-400/70 font-medium uppercase tracking-wider mb-2">Today's Leaders</div>
-          <div className="flex flex-col gap-2">
-            {[...friends, { id: 'me', name: 'You', avatar: user.avatar, minutesToday: 55, streak: 14 }]
-              .sort((a, b) => b.minutesToday - a.minutesToday)
-              .slice(0, 4)
-              .map((f, i) => (
-                <div key={f.id} className="flex items-center gap-3">
-                  <span
-                    className="text-sm font-bold w-5 text-center"
-                    style={{ color: i === 0 ? '#f59e0b' : i === 1 ? '#9ca3af' : i === 2 ? '#b45309' : '#4b5563' }}
-                  >
-                    {i + 1}
-                  </span>
-                  <AvatarDisplay avatar={f.avatar} size="xs" />
-                  <span className="text-sm text-blue-200 flex-1">{f.name}</span>
-                  <span className="text-xs text-gray-500">{f.minutesToday}m</span>
-                  <div className="flex items-center gap-0.5">
-                    <span className="text-xs">🔥</span>
-                    <span className="text-xs text-amber-500">{f.streak}</span>
-                  </div>
-                  {f.id !== 'me' && (
-                    <button
-                      onClick={() => handleCallFriend(f.id)}
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs hover:bg-green-900/40 transition-colors"
-                      title={`Call ${f.name}`}
-                    >
-                      📞
-                    </button>
-                  )}
-                </div>
-              ))}
-          </div>
-        </div>
-      </div>
-
       {/* Chat */}
       <div className="px-4 mt-3 flex flex-col flex-1 min-h-0">
         <div className="glow-card rounded-2xl flex flex-col flex-1 min-h-0 overflow-hidden">
