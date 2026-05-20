@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ['claude/firefly-revision-app-4sSsg']
+    branches: ['claude/fix-message-display-3a0Og']
   workflow_dispatch:
 
 permissions:
