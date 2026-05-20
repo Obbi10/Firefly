@@ -7,6 +7,7 @@ export const SUBJECTS = [
   { id: 'Chemistry',      label: 'Chemistry',         emoji: '🧪', color: '#10b981' },
   { id: 'Biology',        label: 'Biology',           emoji: '🌱', color: '#f59e0b' },
   { id: 'Environmental',  label: 'Environmental Sci', emoji: '🌍', color: '#86efac' },
+  { id: 'Geology',        label: 'Geology',           emoji: '🪨', color: '#a8a29e' },
   { id: 'Astronomy',      label: 'Astronomy',         emoji: '🔭', color: '#818cf8' },
   { id: 'Engineering',    label: 'Engineering',       emoji: '🔧', color: '#6ee7b7' },
   // Humanities
