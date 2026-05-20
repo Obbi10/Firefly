@@ -1,10 +1,13 @@
 import { useStore } from '../store/useStore'
 import AvatarDisplay from '../components/AvatarDisplay'
+import { formatCountdown } from '../data/store'
 
 const SUBJECTS = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History', 'English', 'CS', 'Languages']
 
 export default function Dashboard() {
-  const { user, weekData, todayMinutes, dailyGoalMinutes, setPage, selectedSubject, setSubject } = useStore()
+  const { user, weekData, todayMinutes, dailyGoalMinutes, setPage, selectedSubject, setSubject, activeBoosts } = useStore()
+  const now = Date.now()
+  const liveBoosts = activeBoosts.filter((b) => b.expiresAt > now)
   const progressPct = Math.min(100, Math.round((todayMinutes / dailyGoalMinutes) * 100))
   const hoursTotal = Math.floor(user.totalMinutes / 60)
 
@@ -66,6 +69,22 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Active boosts */}
+      {liveBoosts.length > 0 && (
+        <div className="rounded-2xl p-3 flex flex-col gap-2" style={{ background: '#052e16', border: '1px solid #22c55e30' }}>
+          <div className="text-xs text-green-400/70 font-medium uppercase tracking-wider">Active Boosts</div>
+          <div className="flex flex-wrap gap-2">
+            {liveBoosts.map((b) => (
+              <div key={b.id} className="flex items-center gap-1.5 bg-green-950/60 border border-green-800/30 rounded-full px-3 py-1 text-xs">
+                <span>{b.emoji}</span>
+                <span className="text-green-300 font-medium">{b.name}</span>
+                <span className="text-green-700">· {formatCountdown(b.expiresAt - now)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Weekly Calendar */}
       <div className="glow-card rounded-2xl p-4">

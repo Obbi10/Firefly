@@ -4,7 +4,7 @@ const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: HomeIcon },
   { id: 'timer', label: 'Study', icon: TimerIcon },
   { id: 'room', label: 'Room', icon: RoomIcon },
-  { id: 'shop', label: 'Shop', icon: ShopIcon },
+  { id: 'shop', label: 'Store', icon: ShopIcon },
   { id: 'profile', label: 'Profile', icon: ProfileIcon },
 ]
 
