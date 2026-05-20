@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import AvatarDisplay from '../components/AvatarDisplay'
+import DonutChart from '../components/DonutChart'
 import { ANIMALS, COLOR_SCHEMES, HATS, FRAMES, BACKGROUNDS, getAnimal, RARITY_COLORS } from '../data/avatars'
 import { ACHIEVEMENTS } from '../data/items'
+import { SUBJECTS } from '../data/subjects'
 
 const TABS = ['Avatar', 'Stats', 'Badges']
 
@@ -276,34 +278,98 @@ function AvatarCustomizer({ avatarTab, setAvatarTab }) {
 }
 
 function StatsView() {
-  const { user, weekData } = useStore()
+  const { user, weekData, subjectStats } = useStore()
   const hoursTotal = Math.floor(user.totalMinutes / 60)
   const avgDaily = Math.round(user.totalMinutes / 30)
 
   const stats = [
-    { label: 'Total Hours', value: hoursTotal, unit: 'hrs', icon: '⏱️' },
-    { label: 'Current Streak', value: user.streak, unit: 'days', icon: '🔥' },
+    { label: 'Total Hours',    value: hoursTotal,         unit: 'hrs',  icon: '⏱️' },
+    { label: 'Current Streak', value: user.streak,        unit: 'days', icon: '🔥' },
     { label: 'Longest Streak', value: user.longestStreak, unit: 'days', icon: '🏆' },
-    { label: 'Daily Average', value: avgDaily, unit: 'min', icon: '📈' },
-    { label: 'Level', value: user.level, unit: '', icon: '⭐' },
-    { label: 'Fireflies', value: user.fireflies, unit: '', icon: '🪲' },
+    { label: 'Daily Average',  value: avgDaily,           unit: 'min',  icon: '📈' },
+    { label: 'Level',          value: user.level,         unit: '',     icon: '⭐' },
+    { label: 'Fireflies',      value: user.fireflies,     unit: '',     icon: '🪲' },
   ]
+
+  // Build donut data from subjectStats
+  const donutData = SUBJECTS
+    .map((s) => ({ label: s.label, emoji: s.emoji, minutes: subjectStats?.[s.id] || 0, color: s.color }))
+    .filter((d) => d.minutes > 0)
+    .sort((a, b) => b.minutes - a.minutes)
+
+  const totalTracked = donutData.reduce((s, d) => s + d.minutes, 0)
 
   return (
     <div className="p-4 flex flex-col gap-4">
+      {/* Summary stats grid */}
       <div className="grid grid-cols-2 gap-3">
         {stats.map((s) => (
           <div key={s.label} className="glow-card rounded-2xl p-3">
             <div className="text-xl mb-1">{s.icon}</div>
-            <div className="text-2xl font-black text-white">{s.value.toLocaleString()}<span className="text-sm text-gray-500 font-normal ml-1">{s.unit}</span></div>
+            <div className="text-2xl font-black text-white">
+              {s.value.toLocaleString()}
+              <span className="text-sm text-gray-500 font-normal ml-1">{s.unit}</span>
+            </div>
             <div className="text-xs text-gray-500">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Weekly breakdown */}
+      {/* Subject breakdown — pie chart */}
       <div className="glow-card rounded-2xl p-4">
-        <div className="text-xs text-blue-400/70 font-medium uppercase tracking-wider mb-3">Weekly Breakdown</div>
+        <div className="text-xs text-blue-400/70 font-medium uppercase tracking-wider mb-4">Time by Subject</div>
+
+        <div className="flex items-center gap-5">
+          <DonutChart data={donutData} size={160} thickness={28} showTotal />
+
+          {/* Legend */}
+          <div className="flex-1 flex flex-col gap-2 min-w-0">
+            {donutData.slice(0, 6).map((d) => {
+              const pct = totalTracked > 0 ? Math.round((d.minutes / totalTracked) * 100) : 0
+              const hrs = (d.minutes / 60).toFixed(1)
+              return (
+                <div key={d.label} className="flex items-center gap-2 min-w-0">
+                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color, boxShadow: `0 0 6px ${d.color}80` }} />
+                  <span className="text-xs text-gray-300 flex-1 truncate">{d.emoji} {d.label}</span>
+                  <span className="text-xs font-bold text-white flex-shrink-0">{hrs}h</span>
+                  <span className="text-[10px] text-gray-600 w-7 text-right flex-shrink-0">{pct}%</span>
+                </div>
+              )
+            })}
+            {donutData.length === 0 && (
+              <p className="text-xs text-gray-600">Complete sessions to see your breakdown</p>
+            )}
+          </div>
+        </div>
+
+        {/* Full subject bars */}
+        {donutData.length > 0 && (
+          <div className="mt-4 flex flex-col gap-2.5 border-t border-blue-900/30 pt-4">
+            {donutData.map((d) => {
+              const pct = totalTracked > 0 ? (d.minutes / totalTracked) * 100 : 0
+              const hrs = (d.minutes / 60).toFixed(1)
+              return (
+                <div key={d.label}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-gray-400">{d.emoji} {d.label}</span>
+                    <span className="text-gray-500">{hrs}h · {Math.round(pct)}%</span>
+                  </div>
+                  <div className="h-1.5 bg-blue-950 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full progress-fill"
+                      style={{ width: `${pct}%`, background: d.color, boxShadow: `0 0 6px ${d.color}80` }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Weekly bar chart */}
+      <div className="glow-card rounded-2xl p-4">
+        <div className="text-xs text-blue-400/70 font-medium uppercase tracking-wider mb-3">This Week</div>
         <div className="flex items-end gap-2 h-24">
           {weekData.map((d, i) => {
             const maxMins = Math.max(...weekData.map((w) => w.minutes), 1)

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { DEFAULT_SUBJECT_STATS } from '../data/subjects'
 
 const defaultUser = {
   name: 'Scholar',
@@ -81,6 +82,9 @@ export const useStore = create(
       dailyGoalMinutes: 120,
       todayMinutes: 55,
 
+      // Per-subject minutes — persisted, seeded with realistic defaults
+      subjectStats: { ...DEFAULT_SUBJECT_STATS },
+
       // Active boosts (persisted so they survive page reloads)
       activeBoosts: defaultBoosts,
 
@@ -93,8 +97,8 @@ export const useStore = create(
 
       setSubject: (subject) => set({ selectedSubject: subject }),
 
-      // Called when a study session ends — handles currency, XP, boosts
-      completeSession: (rawMinutes) => {
+      // Called when a study session ends — handles currency, XP, boosts, and subject tracking
+      completeSession: (rawMinutes, subject) => {
         const state = get()
         const now = Date.now()
 
@@ -113,18 +117,22 @@ export const useStore = create(
         const streakBonus = Math.min(0.5, Math.floor(state.user.streak / 7) * 0.05)
         const totalFfMulti = ffMulti * (1 + streakBonus)
 
-        const baseFF = rawMinutes // 1 firefly per minute base
+        const baseFF = rawMinutes
         const earnedFF = Math.round(baseFF * totalFfMulti)
         const earnedXP = Math.round(rawMinutes * 15 * xpMulti)
 
-        // First session bonus of the day (simplified: always give it if todayMinutes was 0 before)
         const firstSessionBonus = state.todayMinutes === 0 ? 50 : 0
-
         const totalFF = earnedFF + firstSessionBonus
+
+        const resolvedSubject = subject || state.selectedSubject || 'Mathematics'
 
         set((s) => ({
           activeBoosts: liveBoosts,
           todayMinutes: s.todayMinutes + rawMinutes,
+          subjectStats: {
+            ...s.subjectStats,
+            [resolvedSubject]: (s.subjectStats[resolvedSubject] || 0) + rawMinutes,
+          },
           user: {
             ...s.user,
             fireflies: s.user.fireflies + totalFF,
@@ -133,7 +141,7 @@ export const useStore = create(
           },
         }))
 
-        return { earnedFF: totalFF, earnedXP, ffMulti: totalFfMulti, xpMulti, firstSessionBonus }
+        return { earnedFF: totalFF, earnedXP, ffMulti: totalFfMulti, xpMulti, firstSessionBonus, subject: resolvedSubject }
       },
 
       // Activate a boost item
@@ -224,6 +232,7 @@ export const useStore = create(
         activeBoosts: state.activeBoosts,
         todayMinutes: state.todayMinutes,
         selectedSubject: state.selectedSubject,
+        subjectStats: state.subjectStats,
       }),
     }
   )

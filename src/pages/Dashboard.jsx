@@ -1,11 +1,11 @@
 import { useStore } from '../store/useStore'
 import AvatarDisplay from '../components/AvatarDisplay'
+import DonutChart from '../components/DonutChart'
 import { formatCountdown } from '../data/store'
-
-const SUBJECTS = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'History', 'English', 'CS', 'Languages']
+import { SUBJECTS as SUBJECT_LIST } from '../data/subjects'
 
 export default function Dashboard() {
-  const { user, weekData, todayMinutes, dailyGoalMinutes, setPage, selectedSubject, setSubject, activeBoosts } = useStore()
+  const { user, weekData, todayMinutes, dailyGoalMinutes, setPage, subjectStats, activeBoosts } = useStore()
   const now = Date.now()
   const liveBoosts = activeBoosts.filter((b) => b.expiresAt > now)
   const progressPct = Math.min(100, Math.round((todayMinutes / dailyGoalMinutes) * 100))
@@ -135,27 +135,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Subject Selector */}
-      <div className="glow-card rounded-2xl p-4">
-        <div className="text-xs text-blue-400/70 font-medium uppercase tracking-wider mb-3">Study Subject</div>
-        <div className="flex flex-wrap gap-2">
-          {SUBJECTS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSubject(s)}
-              className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
-              style={{
-                background: selectedSubject === s ? '#1d4ed8' : '#0a1628',
-                border: selectedSubject === s ? '1px solid #3b82f6' : '1px solid #1d4ed830',
-                color: selectedSubject === s ? '#fff' : '#6b7280',
-                boxShadow: selectedSubject === s ? '0 0 8px #3b82f640' : 'none',
-              }}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Subject mini chart */}
+      <SubjectSummaryCard subjectStats={subjectStats} onStudy={() => setPage('timer')} />
 
       {/* Quick Start */}
       <button
@@ -218,6 +199,58 @@ function StudyingNow() {
       {active.length === 0 && (
         <span className="text-sm text-gray-600">No friends studying right now</span>
       )}
+    </div>
+  )
+}
+
+function SubjectSummaryCard({ subjectStats, onStudy }) {
+  const donutData = SUBJECT_LIST
+    .map((s) => ({ label: s.label, emoji: s.emoji, minutes: subjectStats?.[s.id] || 0, color: s.color }))
+    .filter((d) => d.minutes > 0)
+    .sort((a, b) => b.minutes - a.minutes)
+
+  const top3 = donutData.slice(0, 3)
+
+  return (
+    <div className="glow-card rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-xs text-blue-400/70 font-medium uppercase tracking-wider">Subject Breakdown</div>
+        <button onClick={onStudy} className="text-xs text-blue-400 hover:text-blue-300">
+          Study now →
+        </button>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <DonutChart data={donutData} size={110} thickness={20} showTotal={false} />
+
+        <div className="flex-1 flex flex-col gap-2.5 min-w-0">
+          {top3.length === 0 ? (
+            <p className="text-xs text-gray-600">Start a session to see your breakdown</p>
+          ) : (
+            top3.map((d) => {
+              const total = donutData.reduce((s, x) => s + x.minutes, 0)
+              const pct = total > 0 ? Math.round((d.minutes / total) * 100) : 0
+              return (
+                <div key={d.label} className="min-w-0">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-gray-300 flex items-center gap-1">
+                      <span>{d.emoji}</span>
+                      <span className="truncate">{d.label}</span>
+                    </span>
+                    <span className="text-gray-500 flex-shrink-0 ml-2">{pct}%</span>
+                  </div>
+                  <div className="h-1 bg-blue-950 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${pct}%`, background: d.color, boxShadow: `0 0 4px ${d.color}80` }}
+                    />
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </div>
     </div>
   )
 }
