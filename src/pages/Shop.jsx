@@ -7,11 +7,12 @@ import {
   formatCountdown, RARITY_STYLE,
 } from '../data/store'
 import AvatarDisplay from '../components/AvatarDisplay'
+import { LOOTBOX_TYPES } from '../data/lootboxes'
 
 const TABS = ['Daily', 'Weekly', 'Seasonal', 'Permanent']
 
 export default function Shop() {
-  const { user, buyItem, buyBoost, updateAvatar, activeBoosts, pruneBoosts } = useStore()
+  const { user, buyItem, buyBoost, buyLootbox, updateAvatar, activeBoosts, pruneBoosts } = useStore()
   const [tab, setTab] = useState('Daily')
   const [toast, setToast] = useState(null)
   const [, tick] = useState(0)
@@ -28,6 +29,12 @@ export default function Shop() {
     setTimeout(() => setToast(null), 2500)
   }
 
+  const handleBuyLootbox = (item) => {
+    const ok = buyLootbox(item.boxType, item.cost)
+    if (!ok) { showToast('Not enough coins!', 'error'); return }
+    showToast(`${item.name} added to your queue!`, 'success')
+  }
+
   const handleBuyCosmetic = (item) => {
     if (user.ownedItems.includes(item.id)) {
       if (item.type === 'hat') updateAvatar('hat', item.hatId)
@@ -36,7 +43,7 @@ export default function Shop() {
       showToast(`Equipped ${item.name}!`, 'equip')
       return
     }
-    if (user.fireflies < item.cost) { showToast('Not enough fireflies!', 'error'); return }
+    if (user.coins < item.cost) { showToast('Not enough coins!', 'error'); return }
     buyItem(item.id, item.cost)
     if (item.type === 'hat') updateAvatar('hat', item.hatId)
     if (item.type === 'frame') updateAvatar('frame', item.frameId)
@@ -48,7 +55,7 @@ export default function Shop() {
     const already = activeBoosts.find((b) => b.id === boost.id && b.expiresAt > Date.now())
     if (already) { showToast('Boost already active!', 'error'); return }
     const ok = buyBoost(boost)
-    if (!ok) { showToast('Not enough fireflies!', 'error'); return }
+    if (!ok) { showToast('Not enough coins!', 'error'); return }
     showToast(`${boost.name} activated!`, 'success')
   }
 
@@ -67,12 +74,12 @@ export default function Shop() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-white glow-text">Store</h1>
-            <p className="text-xs text-blue-400 mt-0.5">Spend your hard-earned fireflies</p>
+            <p className="text-xs text-blue-400 mt-0.5">Spend your hard-earned coins</p>
           </div>
           <div className="flex flex-col items-end gap-1">
             <div className="flex items-center gap-1.5 bg-amber-950/60 border border-amber-800/40 rounded-full px-3 py-1">
-              <span className="text-sm">🪲</span>
-              <span className="text-sm font-bold text-amber-400">{user.fireflies.toLocaleString()}</span>
+              <span className="text-sm">🪙</span>
+              <span className="text-sm font-bold text-amber-400">{user.coins.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -108,6 +115,7 @@ export default function Shop() {
             sectionLabel="Daily Deals"
             onBuyBoost={handleBuyBoost}
             onBuyCosmetic={handleBuyCosmetic}
+            onBuyLootbox={handleBuyLootbox}
             user={user}
             activeBoosts={activeBoosts}
           />
@@ -122,6 +130,7 @@ export default function Shop() {
             sectionLabel="Weekly Selection"
             onBuyBoost={handleBuyBoost}
             onBuyCosmetic={handleBuyCosmetic}
+            onBuyLootbox={handleBuyLootbox}
             user={user}
             activeBoosts={activeBoosts}
           />
@@ -136,6 +145,7 @@ export default function Shop() {
             sectionLabel="Spring Collection"
             onBuyBoost={handleBuyBoost}
             onBuyCosmetic={handleBuyCosmetic}
+            onBuyLootbox={handleBuyLootbox}
             user={user}
             activeBoosts={activeBoosts}
           />
@@ -188,7 +198,7 @@ function ActiveBoostsStrip() {
   )
 }
 
-function StoreSection({ items, countdown, countdownLabel, accentColor, accentEmoji, sectionLabel, onBuyBoost, onBuyCosmetic, user, activeBoosts }) {
+function StoreSection({ items, countdown, countdownLabel, accentColor, accentEmoji, sectionLabel, onBuyBoost, onBuyCosmetic, onBuyLootbox, user, activeBoosts }) {
   return (
     <div className="p-4 flex flex-col gap-4">
       {/* Section header */}
@@ -219,6 +229,7 @@ function StoreSection({ items, countdown, countdownLabel, accentColor, accentEmo
             activeBoosts={activeBoosts}
             onBuyBoost={onBuyBoost}
             onBuyCosmetic={onBuyCosmetic}
+            onBuyLootbox={onBuyLootbox}
             accentColor={accentColor}
           />
         ))}
@@ -240,9 +251,9 @@ function EarnRateCard({ accentColor }) {
       <div className="text-xs text-gray-500">Current earn rate</div>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1">
-          <span className="text-sm">🪲</span>
+          <span className="text-sm">🪙</span>
           <span className="text-sm font-bold text-amber-400">{ffBoost}×</span>
-          <span className="text-xs text-gray-600">FF/min</span>
+          <span className="text-xs text-gray-600">coins/min</span>
         </div>
         <div className="flex items-center gap-1">
           <span className="text-sm">⭐</span>
@@ -254,14 +265,19 @@ function EarnRateCard({ accentColor }) {
   )
 }
 
-function StoreItemCard({ item, user, activeBoosts, onBuyBoost, onBuyCosmetic, accentColor }) {
-  const isBoost = !!item.multiplier || item.type === 'shield'
-  const isOwned = !isBoost && user.ownedItems.includes(item.id)
+function StoreItemCard({ item, user, activeBoosts, onBuyBoost, onBuyCosmetic, onBuyLootbox, accentColor }) {
+  const isLootbox = item.type === 'lootbox'
+  const isBoost = !isLootbox && (!!item.multiplier || item.type === 'shield')
+  const isOwned = !isBoost && !isLootbox && user.ownedItems.includes(item.id)
   const isActive = isBoost && activeBoosts.some((b) => b.id === item.id && b.expiresAt > Date.now())
-  const canAfford = user.fireflies >= item.cost
+  const canAfford = user.coins >= item.cost
   const style = RARITY_STYLE[item.rarity] || RARITY_STYLE.common
 
-  const handleClick = () => isBoost ? onBuyBoost(item) : onBuyCosmetic(item)
+  const handleClick = () => {
+    if (isLootbox) return onBuyLootbox?.(item)
+    if (isBoost) return onBuyBoost(item)
+    return onBuyCosmetic(item)
+  }
 
   return (
     <div
@@ -318,7 +334,7 @@ function StoreItemCard({ item, user, activeBoosts, onBuyBoost, onBuyCosmetic, ac
             boxShadow: canAfford && !isOwned && !isActive ? `0 0 10px ${accentColor}30` : 'none',
           }}
         >
-          {isOwned ? 'Equip' : isActive ? 'Active' : item.cost === 0 ? 'Free' : `🪲 ${item.cost}`}
+          {isOwned ? 'Equip' : isActive ? 'Active' : item.cost === 0 ? 'Free' : `🪙 ${item.cost}`}
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { getAnimal, getColorScheme, getFrame, getBackground, getHat } from '../data/avatars'
+import { getAnimal, getColorScheme, getFrame, getBackground, getHat, RARITY_GLOW } from '../data/avatars'
 
 export default function AvatarDisplay({ avatar, size = 'md', showName = false, name = '' }) {
   const animal = getAnimal(avatar.animal)
@@ -6,6 +6,7 @@ export default function AvatarDisplay({ avatar, size = 'md', showName = false, n
   const frame = getFrame(avatar.frame)
   const bg = getBackground(avatar.background)
   const hat = getHat(avatar.hat)
+  const rarityGlow = RARITY_GLOW[animal.rarity] || 'none'
 
   const sizes = {
     xs: { outer: 40, emoji: 18, hat: 12 },
@@ -26,6 +27,7 @@ export default function AvatarDisplay({ avatar, size = 'md', showName = false, n
           style={{
             background: bg.bg,
             ...frame.style,
+            boxShadow: [frame.style?.boxShadow, rarityGlow].filter(Boolean).join(', ') || undefined,
           }}
         >
           {/* Ring color accent */}

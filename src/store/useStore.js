@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_SUBJECT_STATS } from '../data/subjects'
+import { DEFAULT_UNLOCKED_ANIMALS } from '../data/avatars'
+import { getLootboxForSession, rollLootbox } from '../data/lootboxes'
 
 const defaultUser = {
   name: 'Scholar',
@@ -9,8 +11,7 @@ const defaultUser = {
   xpToNext: 3000,
   streak: 14,
   longestStreak: 21,
-  fireflies: 480,
-  embers: 12,
+  coins: 480,
   totalMinutes: 4820,
   avatar: {
     animal: 'owl',
@@ -66,7 +67,6 @@ const weekData = [
   { day: 'S', studied: false, minutes: 0 },
 ]
 
-// Active boost shape: { id, type, multiplier, expiresAt, label, emoji }
 const defaultBoosts = []
 
 // ── Groups seed data ─────────────────────────────────────────────────────────
@@ -110,7 +110,6 @@ const defaultMyGroups = [
   },
 ]
 
-// Groups available to be joined (not yet a member)
 const defaultGroupDirectory = [
   { id: 'grp1',  name: 'Year 11 Science',     password: 'science11',  emoji: '🔬', memberCount: 4 },
   { id: 'grp2',  name: 'Maths Study Gang',     password: 'maths2026',  emoji: '📐', memberCount: 3 },
@@ -134,18 +133,18 @@ export const useStore = create(
       dailyGoalMinutes: 120,
       todayMinutes: 55,
 
-      // Per-subject minutes — persisted, seeded with realistic defaults
       subjectStats: { ...DEFAULT_SUBJECT_STATS },
 
-      // Active boosts
       activeBoosts: defaultBoosts,
 
-      // Groups
+      // Lootbox state
+      unlockedAnimals: [...DEFAULT_UNLOCKED_ANIMALS],
+      pendingLootboxes: [],
+
       myGroups: defaultMyGroups,
       groupDirectory: defaultGroupDirectory,
       activeGroupId: null,
 
-      // Call state (not persisted)
       call: null,
 
       setPage: (page) => set({ activePage: page }),
@@ -154,15 +153,12 @@ export const useStore = create(
 
       setSubject: (subject) => set({ selectedSubject: subject }),
 
-      // Called when a study session ends — handles currency, XP, boosts, and subject tracking
       completeSession: (rawMinutes, subject) => {
         const state = get()
         const now = Date.now()
 
-        // Clear expired boosts first
         const liveBoosts = state.activeBoosts.filter((b) => b.expiresAt > now)
 
-        // Calculate multipliers from active boosts
         const ffMulti = liveBoosts
           .filter((b) => b.type === 'ff')
           .reduce((acc, b) => acc * b.multiplier, 1)
@@ -170,18 +166,21 @@ export const useStore = create(
           .filter((b) => b.type === 'xp')
           .reduce((acc, b) => acc * b.multiplier, 1)
 
-        // Streak bonus: +5% per 7-day block, capped at 50%
         const streakBonus = Math.min(0.5, Math.floor(state.user.streak / 7) * 0.05)
         const totalFfMulti = ffMulti * (1 + streakBonus)
 
-        const baseFF = rawMinutes
-        const earnedFF = Math.round(baseFF * totalFfMulti)
+        const baseCoins = rawMinutes
+        const earnedCoins = Math.round(baseCoins * totalFfMulti)
         const earnedXP = Math.round(rawMinutes * 15 * xpMulti)
 
         const firstSessionBonus = state.todayMinutes === 0 ? 50 : 0
-        const totalFF = earnedFF + firstSessionBonus
+        const totalCoins = earnedCoins + firstSessionBonus
 
         const resolvedSubject = subject || state.selectedSubject || 'Mathematics'
+
+        // Award lootbox based on session length
+        const boxType = getLootboxForSession(rawMinutes)
+        const newLootbox = boxType ? { id: `lb_${Date.now()}`, boxType } : null
 
         set((s) => ({
           activeBoosts: liveBoosts,
@@ -192,16 +191,46 @@ export const useStore = create(
           },
           user: {
             ...s.user,
-            fireflies: s.user.fireflies + totalFF,
+            coins: s.user.coins + totalCoins,
             xp: s.user.xp + earnedXP,
             totalMinutes: s.user.totalMinutes + rawMinutes,
           },
+          pendingLootboxes: newLootbox
+            ? [...s.pendingLootboxes, newLootbox]
+            : s.pendingLootboxes,
         }))
 
-        return { earnedFF: totalFF, earnedXP, ffMulti: totalFfMulti, xpMulti, firstSessionBonus, subject: resolvedSubject }
+        return { earnedCoins: totalCoins, earnedXP, ffMulti: totalFfMulti, xpMulti, firstSessionBonus, subject: resolvedSubject, lootbox: newLootbox }
       },
 
-      // Activate a boost item
+      // Open the next pending lootbox and return the reward
+      openNextLootbox: () => {
+        const state = get()
+        if (!state.pendingLootboxes.length) return null
+        const [next, ...rest] = state.pendingLootboxes
+        const reward = rollLootbox(next.boxType, state.user.ownedItems, state.unlockedAnimals)
+
+        set((s) => {
+          const updates = { pendingLootboxes: rest }
+          if (reward.type === 'coins') {
+            updates.user = { ...s.user, coins: s.user.coins + reward.amount }
+          } else if (reward.type === 'animal') {
+            updates.unlockedAnimals = [...s.unlockedAnimals, reward.animalId]
+          } else if (reward.type === 'item') {
+            updates.user = { ...s.user, ownedItems: [...s.user.ownedItems, reward.itemId] }
+          }
+          return updates
+        })
+
+        return { lootbox: next, reward }
+      },
+
+      // Buy a lootbox from store and add to pending
+      awardLootbox: (boxType) =>
+        set((s) => ({
+          pendingLootboxes: [...s.pendingLootboxes, { id: `lb_${Date.now()}`, boxType }],
+        })),
+
       activateBoost: (boost) => {
         const now = Date.now()
         const expiresAt = now + boost.durationMs
@@ -213,17 +242,16 @@ export const useStore = create(
         }))
       },
 
-      // Prune expired boosts
       pruneBoosts: () => {
         const now = Date.now()
         set((s) => ({ activeBoosts: s.activeBoosts.filter((b) => b.expiresAt > now) }))
       },
 
-      addFireflies: (amount) =>
-        set((state) => ({ user: { ...state.user, fireflies: state.user.fireflies + amount } })),
+      addCoins: (amount) =>
+        set((state) => ({ user: { ...state.user, coins: state.user.coins + amount } })),
 
-      spendFireflies: (amount) =>
-        set((state) => ({ user: { ...state.user, fireflies: Math.max(0, state.user.fireflies - amount) } })),
+      spendCoins: (amount) =>
+        set((state) => ({ user: { ...state.user, coins: Math.max(0, state.user.coins - amount) } })),
 
       updateAvatar: (field, value) =>
         set((state) => ({
@@ -232,24 +260,33 @@ export const useStore = create(
 
       buyItem: (itemId, cost) => {
         const state = get()
-        if (state.user.fireflies < cost) return false
+        if (state.user.coins < cost) return false
         if (state.user.ownedItems.includes(itemId)) return false
         set((s) => ({
           user: {
             ...s.user,
-            fireflies: s.user.fireflies - cost,
+            coins: s.user.coins - cost,
             ownedItems: [...s.user.ownedItems, itemId],
           },
         }))
         return true
       },
 
-      // Buy a consumable (boost) — doesn't add to ownedItems, just activates it
       buyBoost: (boost) => {
         const state = get()
-        if (state.user.fireflies < boost.cost) return false
-        set((s) => ({ user: { ...s.user, fireflies: s.user.fireflies - boost.cost } }))
+        if (state.user.coins < boost.cost) return false
+        set((s) => ({ user: { ...s.user, coins: s.user.coins - boost.cost } }))
         get().activateBoost(boost)
+        return true
+      },
+
+      buyLootbox: (boxType, cost) => {
+        const state = get()
+        if (state.user.coins < cost) return false
+        set((s) => ({
+          user: { ...s.user, coins: s.user.coins - cost },
+          pendingLootboxes: [...s.pendingLootboxes, { id: `lb_${Date.now()}`, boxType }],
+        }))
         return true
       },
 
@@ -294,7 +331,6 @@ export const useStore = create(
           id: 'me', name: state.user.name, avatar: state.user.avatar,
           minutesThisWeek: state.todayMinutes * 7, minutesToday: state.todayMinutes, streak: state.user.streak,
         }
-        // Build simulated members for the joined group (use seeded members)
         const seededIds = ['f3', 'f1', 'f5', 'f2', 'f6']
         const memberCount = found.memberCount
         const simMembers = seededIds
@@ -322,7 +358,6 @@ export const useStore = create(
         })),
 
       sendGroupMessage: (groupId, text) => {
-        const state = get()
         set((s) => ({
           myGroups: s.myGroups.map((g) =>
             g.id !== groupId ? g : {
@@ -369,6 +404,8 @@ export const useStore = create(
         subjectStats: state.subjectStats,
         myGroups: state.myGroups,
         groupDirectory: state.groupDirectory,
+        unlockedAnimals: state.unlockedAnimals,
+        pendingLootboxes: state.pendingLootboxes,
       }),
     }
   )

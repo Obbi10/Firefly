@@ -2,6 +2,7 @@ import { useStore } from './store/useStore'
 import FireflyBackground from './components/FireflyBackground'
 import Navigation from './components/Navigation'
 import CallModal from './components/CallModal'
+import LootboxModal from './components/LootboxModal'
 import Dashboard from './pages/Dashboard'
 import StudyTimer from './pages/StudyTimer'
 import StudyRoom from './pages/StudyRoom'
@@ -21,6 +22,7 @@ const PAGES = {
 export default function App() {
   const activePage = useStore((s) => s.activePage)
   const call = useStore((s) => s.call)
+  const pendingLootboxes = useStore((s) => s.pendingLootboxes)
   const PageComponent = PAGES[activePage] || Dashboard
 
   return (
@@ -37,6 +39,9 @@ export default function App() {
 
       {/* Call overlay — rendered above everything */}
       {call && <CallModal />}
+
+      {/* Lootbox modal — shown when pendingLootboxes exist and no call active */}
+      {!call && pendingLootboxes.length > 0 && <LootboxModal />}
     </div>
   )
 }

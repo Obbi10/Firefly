@@ -18,15 +18,15 @@ export default function Dashboard() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-white glow-text">Firefly</span>
-            <span className="text-lg">🪲</span>
+            <span className="text-lg">🪙</span>
           </div>
           <p className="text-sm text-blue-300 mt-0.5">Good evening, {user.name}</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Firefly currency */}
+          {/* Coin balance */}
           <div className="flex items-center gap-1.5 bg-blue-950/60 border border-blue-800/40 rounded-full px-3 py-1">
-            <span className="text-sm">🪲</span>
-            <span className="text-sm font-bold text-blue-300">{user.fireflies.toLocaleString()}</span>
+            <span className="text-sm">🪙</span>
+            <span className="text-sm font-bold text-blue-300">{user.coins.toLocaleString()}</span>
           </div>
           <button onClick={() => setPage('profile')}>
             <AvatarDisplay avatar={user.avatar} size="sm" />

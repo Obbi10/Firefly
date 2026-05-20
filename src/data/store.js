@@ -5,9 +5,9 @@ export const BOOST_CATALOG = [
   {
     id: 'boost_ff_2x_30m',
     type: 'ff',
-    name: 'Firefly Frenzy',
-    description: '2× fireflies for 30 minutes',
-    emoji: '🪲',
+    name: 'Coin Frenzy',
+    description: '2× coins for 30 minutes',
+    emoji: '🪙',
     multiplier: 2,
     durationMs: 30 * 60 * 1000,
     durationLabel: '30 min',
@@ -17,7 +17,7 @@ export const BOOST_CATALOG = [
     id: 'boost_ff_2x_1h',
     type: 'ff',
     name: 'Glow Rush',
-    description: '2× fireflies for 1 hour',
+    description: '2× coins for 1 hour',
     emoji: '✨',
     multiplier: 2,
     durationMs: 60 * 60 * 1000,
@@ -28,7 +28,7 @@ export const BOOST_CATALOG = [
     id: 'boost_ff_3x_30m',
     type: 'ff',
     name: 'Swarm Mode',
-    description: '3× fireflies for 30 minutes',
+    description: '3× coins for 30 minutes',
     emoji: '🌟',
     multiplier: 3,
     durationMs: 30 * 60 * 1000,
@@ -38,8 +38,8 @@ export const BOOST_CATALOG = [
   {
     id: 'boost_ff_2x_day',
     type: 'ff',
-    name: 'Firefly Rain',
-    description: '2× fireflies all day',
+    name: 'Coin Rain',
+    description: '2× coins all day',
     emoji: '🌧️',
     multiplier: 2,
     durationMs: 24 * 60 * 60 * 1000,
@@ -165,15 +165,65 @@ export function getDailyStore() {
   return boosts.map((b, i) => ({ ...b, cost: costs[i], storeType: 'daily' }))
 }
 
+export const LOOTBOX_STORE_ITEMS = [
+  {
+    id: 'lb_spark',
+    type: 'lootbox',
+    boxType: 'spark',
+    name: 'Spark Box',
+    description: 'Common lootbox — coins, hats & frames',
+    emoji: '📦',
+    rarity: 'common',
+    cost: 200,
+    storeType: 'weekly',
+  },
+  {
+    id: 'lb_glow',
+    type: 'lootbox',
+    boxType: 'glow',
+    name: 'Glow Box',
+    description: 'Rare lootbox — rare items & animals',
+    emoji: '🎁',
+    rarity: 'rare',
+    cost: 450,
+    storeType: 'weekly',
+  },
+  {
+    id: 'lb_radiant',
+    type: 'lootbox',
+    boxType: 'radiant',
+    name: 'Radiant Box',
+    description: 'Epic lootbox — epic creatures & gear',
+    emoji: '✨',
+    rarity: 'epic',
+    cost: 800,
+    storeType: 'weekly',
+  },
+  {
+    id: 'lb_celestial',
+    type: 'lootbox',
+    boxType: 'celestial',
+    name: 'Celestial Box',
+    description: 'Legendary lootbox — legendary creatures only',
+    emoji: '🌟',
+    rarity: 'legendary',
+    cost: 1500,
+    storeType: 'weekly',
+  },
+]
+
 export function getWeeklyStore() {
   const week = weekOfYear()
   const boosts = seededShuffle(BOOST_CATALOG, week * 37).slice(0, 3)
   const cosmetics = seededShuffle(SEASONAL_COSMETICS, week * 71).slice(0, 2)
   const boostCosts = [90, 140, 220]
   const cosmeticCosts = [350, 500]
+  // Rotate 2 lootboxes into the weekly store
+  const lootboxes = seededShuffle(LOOTBOX_STORE_ITEMS, week * 53).slice(0, 2)
   return [
     ...boosts.map((b, i) => ({ ...b, id: b.id + '_w', cost: boostCosts[i], storeType: 'weekly' })),
     ...cosmetics.map((c, i) => ({ ...c, id: c.id + '_w', cost: cosmeticCosts[i], storeType: 'weekly' })),
+    ...lootboxes,
   ]
 }
 

@@ -5,6 +5,7 @@ import DonutChart from '../components/DonutChart'
 import { ANIMALS, COLOR_SCHEMES, HATS, FRAMES, BACKGROUNDS, getAnimal, RARITY_COLORS } from '../data/avatars'
 import { ACHIEVEMENTS } from '../data/items'
 import { SUBJECTS } from '../data/subjects'
+import { LOOTBOX_TYPES } from '../data/lootboxes'
 
 const TABS = ['Avatar', 'Stats', 'Badges']
 
@@ -111,7 +112,7 @@ export default function Profile() {
 }
 
 function AvatarCustomizer({ avatarTab, setAvatarTab }) {
-  const { user, updateAvatar } = useStore()
+  const { user, updateAvatar, unlockedAnimals } = useStore()
   const avTabs = [
     { id: 'animal', label: '🐾 Animal' },
     { id: 'color', label: '🎨 Color' },
@@ -150,27 +151,33 @@ function AvatarCustomizer({ avatarTab, setAvatarTab }) {
       {/* Options */}
       {avatarTab === 'animal' && (
         <div className="grid grid-cols-4 gap-3">
-          {ANIMALS.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => updateAvatar('animal', a.id)}
-              className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all"
-              style={{
-                background: user.avatar.animal === a.id ? '#0d1f3c' : '#060f23',
-                border: `1px solid ${user.avatar.animal === a.id ? '#3b82f6' : '#1d4ed820'}`,
-                boxShadow: user.avatar.animal === a.id ? '0 0 12px #3b82f640' : 'none',
-              }}
-            >
-              <span className="text-2xl">{a.emoji}</span>
-              <span className="text-[10px] text-gray-400 truncate w-full text-center">{a.name}</span>
-              <span
-                className="text-[9px] font-bold"
-                style={{ color: RARITY_COLORS[a.rarity] }}
+          {ANIMALS.map((a) => {
+            const isUnlocked = unlockedAnimals.includes(a.id)
+            const isActive = user.avatar.animal === a.id
+            return (
+              <button
+                key={a.id}
+                onClick={() => isUnlocked && updateAvatar('animal', a.id)}
+                className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all relative"
+                style={{
+                  background: isActive ? '#0d1f3c' : '#060f23',
+                  border: `1px solid ${isActive ? RARITY_COLORS[a.rarity] : '#1d4ed820'}`,
+                  boxShadow: isActive ? `0 0 12px ${RARITY_COLORS[a.rarity]}50` : 'none',
+                  opacity: isUnlocked ? 1 : 0.45,
+                  cursor: isUnlocked ? 'pointer' : 'default',
+                }}
               >
-                {a.rarity}
-              </span>
-            </button>
-          ))}
+                <span className="text-2xl" style={{ filter: isUnlocked ? 'none' : 'grayscale(100%)' }}>{a.emoji}</span>
+                <span className="text-[10px] text-gray-400 truncate w-full text-center">{a.name}</span>
+                <span className="text-[9px] font-bold" style={{ color: RARITY_COLORS[a.rarity] }}>{a.rarity}</span>
+                {!isUnlocked && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl">
+                    <span className="text-xs">🔒</span>
+                  </div>
+                )}
+              </button>
+            )
+          })}
         </div>
       )}
 
@@ -288,7 +295,7 @@ function StatsView() {
     { label: 'Longest Streak', value: user.longestStreak, unit: 'days', icon: '🏆' },
     { label: 'Daily Average',  value: avgDaily,           unit: 'min',  icon: '📈' },
     { label: 'Level',          value: user.level,         unit: '',     icon: '⭐' },
-    { label: 'Fireflies',      value: user.fireflies,     unit: '',     icon: '🪲' },
+    { label: 'Coins',          value: user.coins,         unit: '',     icon: '🪙' },
   ]
 
   // Build donut data from subjectStats
@@ -435,8 +442,8 @@ function BadgesView() {
                 <div className="text-xs text-gray-500 mt-0.5">{a.description}</div>
               </div>
               <div className="flex items-center gap-1 text-xs text-amber-500">
-                <span>🪲</span>
-                <span>{a.reward} fireflies</span>
+                <span>🪙</span>
+                <span>{a.reward} coins</span>
               </div>
             </div>
           )

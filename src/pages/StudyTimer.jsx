@@ -262,7 +262,7 @@ export default function StudyTimer() {
             {/* Projected earnings */}
             <div className="mt-4 mx-4 w-full max-w-xs">
               <div className="rounded-2xl p-3 grid grid-cols-2 gap-3" style={{ background: '#0a1628', border: '1px solid #1d4ed830' }}>
-                <EarningPreview icon="🪲" label="Fireflies" value={projectedFF} multiplier={ffMultiActive} color="#fbbf24" />
+                <EarningPreview icon="🪙" label="Coins" value={projectedFF} multiplier={ffMultiActive} color="#fbbf24" />
                 <EarningPreview icon="⭐" label="XP" value={projectedXP} multiplier={xpMultiActive} color="#60a5fa" />
               </div>
             </div>
@@ -285,7 +285,7 @@ export default function StudyTimer() {
             </div>
 
             <p className="text-xs text-gray-600 mt-4">
-              Streak bonus: +{Math.min(50, Math.floor(14 / 7) * 5)}% fireflies
+              Streak bonus: +{Math.min(50, Math.floor(14 / 7) * 5)}% coins
             </p>
           </>
         )}
@@ -325,7 +325,7 @@ function CtrlBtn({ onClick, children }) {
 }
 
 function CompletedView({ result, subjectData, onNext, onPickNew }) {
-  const { earnedFF, earnedXP, ffMulti, firstSessionBonus } = result
+  const { earnedCoins, earnedXP, ffMulti, firstSessionBonus, lootbox } = result
   return (
     <div className="flex flex-col items-center gap-4 px-6 text-center">
       <div className="text-7xl float-anim">🎉</div>
@@ -340,14 +340,20 @@ function CompletedView({ result, subjectData, onNext, onPickNew }) {
       {/* Breakdown */}
       <div className="w-full rounded-2xl p-4 flex flex-col gap-2.5" style={{ background: '#0a1628', border: '1px solid #1d4ed840' }}>
         <div className="text-xs text-blue-400/70 font-medium uppercase tracking-wider text-left mb-1">Earnings Breakdown</div>
-        <Row label="🪲 Base fireflies" value={`+${Math.round(earnedFF / ffMulti)}`} />
-        {ffMulti > 1 && <Row label={`✨ Boost (${ffMulti}×)`} value={`+${Math.round(earnedFF - earnedFF / ffMulti)}`} color="#4ade80" />}
+        <Row label="🪙 Base coins" value={`+${Math.round(earnedCoins / ffMulti)}`} />
+        {ffMulti > 1 && <Row label={`✨ Boost (${ffMulti}×)`} value={`+${Math.round(earnedCoins - earnedCoins / ffMulti)}`} color="#4ade80" />}
         {firstSessionBonus > 0 && <Row label="🌅 First session bonus" value={`+${firstSessionBonus}`} color="#fbbf24" />}
         <div className="border-t border-blue-900/30 pt-2.5 flex items-center justify-between">
-          <span className="text-sm text-white font-semibold">Total fireflies</span>
-          <span className="text-2xl font-black text-amber-400 glow-gold">+{earnedFF}</span>
+          <span className="text-sm text-white font-semibold">Total coins</span>
+          <span className="text-2xl font-black text-amber-400 glow-gold">+{earnedCoins}</span>
         </div>
         <Row label="⭐ XP earned" value={`+${earnedXP}`} color="#60a5fa" />
+        {lootbox && (
+          <div className="border-t border-blue-900/30 pt-2.5 flex items-center justify-between">
+            <span className="text-sm text-white font-semibold">Lootbox earned!</span>
+            <span className="text-lg">📦</span>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3 w-full">
